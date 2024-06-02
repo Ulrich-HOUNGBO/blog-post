@@ -34,6 +34,24 @@
       "compilerOptions": {
         "tsConfigPath": "apps/auth/tsconfig.app.json"
       }
+    },
+    "blog": {
+      "type": "application",
+      "root": "apps/blog",
+      "entryFile": "main",
+      "sourceRoot": "apps/blog/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/blog/tsconfig.app.json"
+      }
+    },
+    "article": {
+      "type": "application",
+      "root": "apps/article",
+      "entryFile": "main",
+      "sourceRoot": "apps/article/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/article/tsconfig.app.json"
+      }
     }
   },
   "monorepo": true,

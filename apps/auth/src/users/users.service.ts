@@ -1,26 +1,53 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { UsersRepository } from './users.repository';
+import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class UsersService {
-  create(createUserDto: CreateUserDto) {
-    return 'This action adds a new user';
+  constructor(private readonly usersRepository: UsersRepository) {}
+
+  getProfile(email: string) {
+    return this.usersRepository.findOne({ email });
+  }
+
+  async create(createUserDto: CreateUserDto) {
+    this.checkIfUserNameExists(createUserDto.username);
+    if (this.checkIfUserNameExists(createUserDto.username)) {
+      throw new BadRequestException('Username already exists');
+    }
+    return this.usersRepository.create({
+      ...createUserDto,
+      password: await bcrypt.hash(createUserDto.password, 10),
+    });
   }
 
   findAll() {
-    return `This action returns all users`;
+    return this.usersRepository.find({});
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} user`;
+  findOne(id: string) {
+    return this.usersRepository.findOne({ _id: id });
   }
 
-  update(id: number, updateUserDto: UpdateUserDto) {
-    return `This action updates a #${id} user`;
+  update(id: string, updateUserDto: UpdateUserDto) {
+    return this.usersRepository.findOneAndUpdate(
+      { _id: id },
+      { $set: updateUserDto },
+    );
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} user`;
+  remove(id: string) {
+    return this.usersRepository.findOneAndDelete({ _id: id });
+  }
+
+  checkIfUserNameExists(username: string) {
+    const user = this.usersRepository.findOne({ username });
+    return !!user;
+  }
+
+  getUser(email: string) {
+    return this.usersRepository.findOne({ email });
   }
 }

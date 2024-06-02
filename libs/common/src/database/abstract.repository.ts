@@ -1,152 +1,52 @@
-import { AbstractEntity } from '@app/common/database/abstract.entity';
-import {
-  EntityManager,
-  FindManyOptions,
-  FindOneOptions,
-  FindOptionsRelations,
-  FindOptionsWhere,
-  Repository,
-} from 'typeorm';
+import { AbstractDocument } from '@app/common/database/abstract.schema';
+import { FilterQuery, Model, Types, UpdateQuery } from 'mongoose';
 import { Logger, NotFoundException } from '@nestjs/common';
-import { QueryDeepPartialEntity } from 'typeorm/query-builder/QueryPartialEntity';
 
-export abstract class AbstractRepository<T extends AbstractEntity<T>> {
-  protected abstract readonly logger: Logger;
+export abstract class AbstractRepository<TDocument extends AbstractDocument> {
+  protected readonly logger: Logger;
+  protected constructor(protected readonly model: Model<TDocument>) {}
 
-  protected constructor(
-    private readonly entityRepository: Repository<T>,
-    protected readonly entityManager: EntityManager,
-  ) {}
-
-  /**
-   * Creates a new entity in the database.
-   *
-   * @param entity - The entity to be created.
-   * @returns {Promise} - A promise that resolves to the created entity.
-   */
-
-  async create(entity: T): Promise<T> {
-    return this.entityManager.save(entity);
+  async create(document: Omit<TDocument, '_id'>): Promise<TDocument> {
+    const createdDocument = new this.model({
+      ...document,
+      _id: new Types.ObjectId(),
+    });
+    return (await createdDocument.save()).toJSON() as TDocument;
   }
 
-  /**
-   * Finds entity in the database that matches the provided conditions.
-   *
-   * @returns {Promise<[]>} - A promise that resolves to an array of found entity.
-   * @param options
-   */
-
-  async find(options: FindManyOptions<T>): Promise<T[]> {
-    return this.entityRepository.find(options);
+  async find(filter: FilterQuery<TDocument>): Promise<TDocument[]> {
+    return this.model.find(filter).lean<TDocument[]>(true);
   }
 
-  /**
-   * Finds a single entity in the database that matches the provided conditions.
-   * Throws a NotFoundException if no entity is found.
-   *
-   * @returns {Promise} - A promise that resolves to the found entity.
-   * @throws {NotFoundException} - If no entity is found.
-   * @param options
-   */
-
-  async findOne(options: FindOneOptions<T>): Promise<T> {
-    return await this.entityRepository.findOne(options);
-  }
-
-  async findOneWithRelation(
-    where: FindOptionsWhere<T>,
-    relation: FindOptionsRelations<T>,
-  ): Promise<T> {
-    return await this.entityRepository.findOne({ where, relations: relation });
-  }
-
-  /**
-   * Finds entity in the database that matches the provided conditions.
-   * Throws a NotFoundException if no entity is found.
-   *
-   * @param {FindOptionsWhere} where - The conditions to match.
-   * @returns {Promise} - A promise that resolves to the found entity.
-   * @throws {NotFoundException} - If no entity is found.
-   */
-
-  async findByParam(where: FindOptionsWhere<T>): Promise<T[]> {
-    const entities = await this.entityRepository.find({ where });
-    console.log('entities', entities);
-    if (!entities || entities.length == 0) {
-      this.logger.warn(`Entity not found with ${JSON.stringify(where)}`);
-      throw new NotFoundException('Entity not found');
+  async findOne(filter: FilterQuery<TDocument>): Promise<TDocument> {
+    const document = this.model.findOne(filter).lean<TDocument>(true);
+    if (!document) {
+      this.logger.warn(`Document with id ${filter} not found`);
+      throw new NotFoundException(`Document with id ${filter} not found`);
     }
-    return entities;
+    return document;
   }
 
-  /**
-   * Updates an entity in the database that matches the provided conditions.
-   * Throws a NotFoundException if no entity is found to update.
-   *
-   * @param {FindOptionsWhere} where - The conditions to match.
-   * @param {QueryDeepPartialEntity} partialEntity - The new values for the entity.
-   * @returns {Promise} - A promise that resolves to the updated entity.
-   * @throws {NotFoundException} - If no entity is found to update.
-   */
-
-  async update(
-    where: FindOptionsWhere<T>,
-    partialEntity: QueryDeepPartialEntity<T>,
-  ): Promise<T> {
-    await this.entityRepository.update(where, partialEntity);
-
-    return this.findOne({ where });
+  async findOneAndUpdate(
+    id: FilterQuery<TDocument>,
+    update: UpdateQuery<TDocument>,
+  ): Promise<TDocument> {
+    const document = this.model
+      .findOneAndUpdate(id, update, { new: true })
+      .lean<TDocument>();
+    if (!document) {
+      this.logger.warn(`Document with id ${id} not found`);
+      throw new NotFoundException(`Document with id ${id} not found`);
+    }
+    return document;
   }
 
-  /**
-   * Deletes an entity in the database that matches the provided conditions.
-   *
-   * @param {FindOptionsWhere} where - The conditions to match.
-   * @param message
-   * @returns {Promise<void>} - A promise that resolves when the deletion is complete.
-   */
-
-  async delete(
-    where: FindOptionsWhere<T>,
-    message?: string | null,
-  ): Promise<string> {
-    await this.entityRepository.delete(where);
-    return message ?? message;
-  }
-
-  /**
-   * Soft-delete an entity in the database that matches the provided conditions
-   * @param {FindOptionsWhere} where - The conditions to match.
-   * @param message
-   * @returns {Promise<void>} - A promise that resolves when the deletion is complete.
-   */
-
-  async softDelete(
-    where: FindOptionsWhere<T>,
-    message?: string | null,
-  ): Promise<string> {
-    await this.entityRepository.softDelete(where);
-    await this.entityRepository.update(where, {
-      deleted: true,
-    } as unknown as QueryDeepPartialEntity<T>);
-    return message ?? message;
-  }
-
-  /**
-   * Restore an entity in the database that matches the provided conditions
-   * @param {FindOptionsWhere} where - The conditions to match.
-   * @param message
-   * @returns {Promise<void>} - A promise that resolves when the deletion is complete.
-   */
-
-  async restore(
-    where: FindOptionsWhere<T>,
-    message?: string | null,
-  ): Promise<string> {
-    await this.entityRepository.restore(where);
-    await this.entityRepository.update(where, {
-      deleted: false,
-    } as unknown as QueryDeepPartialEntity<T>);
-    return message ?? message;
+  async findOneAndDelete(id: FilterQuery<TDocument>): Promise<TDocument> {
+    const document = this.model.findOneAndDelete(id).lean<TDocument>(true);
+    if (!document) {
+      this.logger.warn(`Document with id ${id} not found`);
+      throw new NotFoundException(`Document with id ${id} not found`);
+    }
+    return document;
   }
 }

@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        .container {
+            width: 80%;
+            margin: auto;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+        .header {
+            text-align: center;
+            padding: 10px 0;
+        }
+        .header h1 {
+            margin: 0;
+        }
+        .content {
+            margin: 20px 0;
+        }
+        .activation-code {
+            font-weight: bold;
+            color: #2c3e50;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Welcome to Our Platform</h1>
+        </div>
+        <div class="content">
+            <p>Dear {{name}},</p>
+            <p>This is email contain your credentials, please keep it safe.</p>
+            <p>Username <span class="activation-code">{{username}}</span></p>
+            <p>Password <span class="activation-code">{{password}}</span></p>
+            <p>Please use these credentials to connect to your profile.</p>
+            <p>Best regards,</p>
+            <p>Referral Catch</p>
+        </div>
+    </div>
+</body>
+</html>
